@@ -64,13 +64,19 @@ export const runApprovalCheck = async (userMessage: string) => {
   return response.choices[0].message.parsed?.approved
 }
 
-export const summarizeMessages = async (messages: AIMessage[]) => {
-  const response = await runLLM({
-    systemPrompt:
-      'Summarize the key points of the conversation in a concise way that would be helpful as context for future interactions. Make it like a play by play of the conversation.',
-    messages,
+// LLM instance that only summarizes conversations
+export const summarizeMessage = async (olderMessages: []) => {
+  const response = await openai.beta.chat.completions.parse({
+    model: 'gpt-4o-mini',
     temperature: 0.3,
+    messages: [
+      {
+        role: 'system',
+        content: `Summarize the key points of the conversation in a concise way that would be helpful as context for future interactions. Make it like a play by play of the conversation.`,
+      },
+      ...olderMessages,
+    ],
   })
 
-  return response.content || ''
+  return response.choices[0].message || ''
 }

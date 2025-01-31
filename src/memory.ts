@@ -41,6 +41,13 @@ export const addMessages = async (messages: AIMessage[]) => {
   db.data.messages.push(...messages.map(addMetadata))
 
   if (db.data.messages.length >= 10) {
+    // Remove the first 5 messages to manage context window
+    // Check to ensure that, we do not leave DB at tool call state.
+    if (db.data.messages[4].role == 'tool') {
+      db.data.messages.splice(0, 6)
+    } else {
+      db.data.messages.splice(0, 5)
+    }
     const oldestMessages = db.data.messages.slice(0, 5).map(removeMetadata)
     const summary = await summarizeMessages(oldestMessages)
     db.data.summary = summary
@@ -54,7 +61,14 @@ export const getMessages = async () => {
   const messages = db.data.messages.map(removeMetadata)
   const lastFive = messages.slice(-5)
 
-  // If first message is a tool response, get one more message before it
+  /* 
+    By Design the last message of DB will never be a plain tool call definition.
+    You do not want to send a tool call definition, for summarization
+    without the user prompt which triggered it.
+
+    So if 1st message of last 5 is a tool call definition
+    we need to go back and add one more to ensure that the context is complete
+  */
   if (lastFive[0]?.role === 'tool') {
     const sixthMessage = messages[messages.length - 6]
     if (sixthMessage) {
