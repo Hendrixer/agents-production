@@ -41,6 +41,9 @@ export const addMessages = async (messages: AIMessage[]) => {
   db.data.messages.push(...messages.map(addMetadata))
 
   if (db.data.messages.length >= 10) {
+    const oldestMessages = db.data.messages.slice(0, 5).map(removeMetadata)
+    const summary = await summarizeMessages(oldestMessages)
+    db.data.summary = summary
     // Remove the first 5 messages to manage context window
     // Check to ensure that, we do not leave DB at tool call state.
     if (db.data.messages[4].role == 'tool') {
@@ -48,9 +51,6 @@ export const addMessages = async (messages: AIMessage[]) => {
     } else {
       db.data.messages.splice(0, 5)
     }
-    const oldestMessages = db.data.messages.slice(0, 5).map(removeMetadata)
-    const summary = await summarizeMessages(oldestMessages)
-    db.data.summary = summary
   }
 
   await db.write()
